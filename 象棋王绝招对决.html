@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>象棋王：绝招对决 v1.0</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.8);
+            --primary: #38bdf8;
+            --red: #ef4444;
+            --black: #94a3b8;
+            --text: #f8fafc;
+            --border: #334155;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%),
+                linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9));
+        }
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            flex: 1;
+        }
+
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: var(--panel-bg);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 5px var(--primary);
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+        }
+
+        .status-panel {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .player-card {
+            background: var(--panel-bg);
+            padding: 10px;
+            border-radius: 8px;
+            width: 48%;
+            border: 1px solid var(--border);
+        }
+
+        .player-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        }
+
+        .player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .red-text { color: var(--red); }
+        .black-text { color: var(--black); }
+
+        .energy-bar-container {
+            width: 100%;
+            height: 10px;
+            background: #1e293b;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .energy-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .energy-red { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+        .energy-black { background: linear-gradient(90deg, #475569, #94a3b8); }
+
+        .skill-btn {
+            width: 100%;
+            padding: 5px;
+            background: #1e293b;
+            color: #64748b;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: not-allowed;
+            transition: all 0.3s;
+        }
+
+        .skill-btn.ready {
+            background: rgba(56, 189, 248, 0.2);
+            color: var(--primary);
+            border-color: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 5px rgba(56, 189, 248, 0.4); }
+            50% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(56, 189, 248, 0.4); }
+        }
+
+        #board-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 9/10;
+            margin: 10px 0;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            background: var(--panel-bg);
+            color: var(--text);
+            border: 1px solid var(--primary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        }
+
+        #message-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .show-message {
+            opacity: 1 !important;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        #skill-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            border: 1px solid var(--primary);
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            text-align: center;
+        }
+
+        .modal h2 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .modal p {
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="header">
+        <div class="title">象棋王：绝招对决</div>
+        <div class="stats">
+            <span>胜: <span id="win-count" class="red-text">0</span></span>
+            <span>负: <span id="loss-count" class="black-text">0</span></span>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div id="black-card" class="player-card">
+            <div class="player-name">
+                <span class="black-text">天网 AI (黑方)</span>
+                <span id="black-energy-text">0/100</span>
+            </div>
+            <div class="energy-bar-container">
+                <div id="black-energy" class="energy-bar energy-black"></div>
+            </div>
+            <button id="btn-black-skill" class="skill-btn" disabled>AI绝招</button>
+        </div>
+        
+        <div id="red-card" class="player-card active">
+            <div class="player-name">
+                <span class="red-text">聂无悔 (红方)</span>
+                <span id="red-energy-text">0/100</span>
+            </div>
+            <div class="energy-bar-container">
+                <div id="red-energy" class="energy-bar energy-red"></div>
+            </div>
+            <button id="btn-red-skill" class="skill-btn" disabled>天地同寿 (100 SP)</button>
+        </div>
+    </div>
+
+    <div id="board-container">
+        <canvas id="game-canvas"></canvas>
+        <canvas id="skill-effect"></canvas>
+        <div id="message-overlay"></div>
+    </div>
+
+    <div class="controls">
+        <button id="btn-undo" class="btn">悔棋</button>
+        <button id="btn-restart" class="btn">重新开始</button>
+        <button id="btn-help" class="btn">规则说明</button>
+    </div>
+</div>
+
+<div id="help-modal" class="modal">
+    <div class="modal-content">
+        <h2>绝招对决 规则</h2>
+        <p style="text-align: left; font-size: 0.9rem;">
+            1. 经典中国象棋规则，红方先行。<br>
+            2. <strong>能量机制</strong>：每走一步积攒10点能量(SP)，吃子积攒20点。上限100点。<br>
+            3. <strong>红方绝招【天地同寿】</strong>：能量满时点击发动，牺牲己方场上随机1个棋子，直接摧毁对方场上随机1个非将帅棋子（无视距离）。<br>
+            4. <strong>黑方绝招【暗影突袭】</strong>：AI专属，随机移除红方一个兵/卒。<br>
+            5. 离线保存您的胜利次数，尽情挑战天网AI吧！
+        </p>
+        <button id="btn-close-help" class="btn" style="width: 100%">我明白了</button>
+    </div>
+</div>
+
+<script>
+/**
+ * 象棋王：绝招对决 v1.0
+ * 单文件 HTML 离线游戏
+ */
+
+(function() {
+    // --- 核心配置与状态 ---
+    const CONFIG = {
+        boardCols: 9,
+        boardRows: 10,
+        colors: {
+            board: '#0f172a',
+            grid: '#1e293b',
+            gridLine: '#38bdf8',
+            red: '#ef4444',
+            redGlow: 'rgba(239, 68, 68, 0.6)',
+            black: '#94a3b8',
+            blackGlow: 'rgba(148, 163, 184, 0.6)',
+            highlight: 'rgba(56, 189, 248, 0.4)',
+            select: 'rgba(250, 204, 21, 0.6)',
+            validMove: 'rgba(34, 197, 94, 0.6)'
+        }
+    };
+
+    let state = {
+        board: [], // 10x9 二维数组
+        turn: 'red', // 'red' | 'black'
+        selectedPiece: null, // {r, c}
+        validMoves: [], // [{r, c}]
+        history: [], // 存放悔棋状态
+        gameOver: false,
+        redEnergy: 0,
+        blackEnergy: 0,
+        stats: { wins: 0, losses: 0 }
+    };
+
+    // DOM 元素
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const effectCanvas = document.getElementById('skill-effect');
+    const effectCtx = effectCanvas.getContext('2d');
+    const messageOverlay = document.getElementById('message-overlay');
+
+    // 棋子定义
+    const PIECES = {
+        'r_jiang': { text: '帅', type: 'jiang', color: 'red' },
+        'r_shi': { text: '仕', type: 'shi', color: 'red' },
+        'r_xiang': { text: '相', type: 'xiang', color: 'red' },
+        'r_ma': { text: '马', type: 'ma', color: 'red' },
+        'r_che': { text: '车', type: 'che', color: 'red' },
+        'r_pao': { text: '炮', type: 'pao', color: 'red' },
+        'r_bing': { text: '兵', type: 'bing', color: 'red' },
+        
+        'b_jiang': { text: '将', type: 'jiang', color: 'black' },
+        'b_shi': { text: '士', type: 'shi', color: 'black' },
+        'b_xiang': { text: '象', type: 'xiang', color: 'black' },
+        'b_ma': { text: '马', type: 'ma', color: 'black' },
+        'b_che': { text: '车', type: 'che', color: 'black' },
+        'b_pao': { text: '炮', type: 'pao', color: 'black' },
+        'b_bing': { text: '卒', type: 'bing', color: 'black' }
+    };
+
+    // --- 初始化与生命周期 ---
+
+    function init() {
+        loadStats();
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('click', handleBoardClick);
+        document.getElementById('btn-restart').addEventListener('click', startNewGame);
+        document.getElementById('btn-undo').addEventListener('click', undoMove);
+        
+        document.getElementById('btn-red-skill').addEventListener('click', useRedSkill);
+        
+        document.getElementById('btn-help').addEventListener('click', () => {
+            document.getElementById('help-modal').style.display = 'flex';
+        });
+        document.getElementById('btn-close-help').addEventListener('click', () => {
+            document.getElementById('help-modal').style.display = 'none';
+        });
+
+        startNewGame();
+        
+        // 渲染循环
+        requestAnimationFrame(renderLoop);
+    }
+
+    function loadStats() {
+        try {
+            const wins = localStorage.getItem('xw_wins') || 0;
+            const losses = localStorage.getItem('xw_losses') || 0;
+            state.stats.wins = parseInt(wins);
+            state.stats.losses = parseInt(losses);
+            updateStatsUI();
+        } catch (e) {
+            console.warn('LocalStorage not available');
+        }
+    }
+
+    function saveStats() {
+        try {
+            localStorage.setItem('xw_wins', state.stats.wins);
+            localStorage.setItem('xw_losses', state.stats.losses);
+            updateStatsUI();
+        } catch (e) {}
+    }
+
+    function updateStatsUI() {
+        document.getElementById('win-count').textContent = state.stats.wins;
+        document.getElementById('loss-count').textContent = state.stats.losses;
+    }
+
+    function resizeCanvas() {
+        const container = document.getElementById('board-container');
+        const rect = container.getBoundingClientRect();
+        
+        // 保证高清渲染
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        effectCanvas.width = rect.width * dpr;
+        effectCanvas.height = rect.height * dpr;
+        
+        ctx.scale(dpr, dpr);
+        effectCtx.scale(dpr, dpr);
+        
+        CONFIG.cellSize = Math.min(rect.width / 10, rect.height / 11);
+        CONFIG.offsetX = (rect.width - CONFIG.cellSize * 8) / 2;
+        CONFIG.offsetY = (rect.height - CONFIG.cellSize * 9) / 2;
+        
+        drawBoard();
+    }
+
+    function startNewGame() {
+        state.board = Array(10).fill(null).map(() => Array(9).fill(null));
+        
+        // 初始化黑方（上）
+        state.board[0] = ['b_che', 'b_ma', 'b_xiang', 'b_shi', 'b_jiang', 'b_shi', 'b_xiang', 'b_ma', 'b_che'];
+        state.board[2][1] = 'b_pao'; state.board[2][7] = 'b_pao';
+        state.board[3][0] = 'b_bing'; state.board[3][2] = 'b_bing'; state.board[3][4] = 'b_bing'; state.board[3][6] = 'b_bing'; state.board[3][8] = 'b_bing';
+
+        // 初始化红方（下）
+        state.board[9] = ['r_che', 'r_ma', 'r_xiang', 'r_shi', 'r_jiang', 'r_shi', 'r_xiang', 'r_ma', 'r_che'];
+        state.board[7][1] = 'r_pao'; state.board[7][7] = 'r_pao';
+        state.board[6][0] = 'r_bing'; state.board[6][2] = 'r_bing'; state.board[6][4] = 'r_bing'; state.board[6][6] = 'r_bing'; state.board[6][8] = 'r_bing';
+
+        state.turn = 'red';
+        state.selectedPiece = null;
+        state.validMoves = [];
+        state.history = [];
+        state.gameOver = false;
+        state.redEnergy = 0;
+        state.blackEnergy = 0;
+        
+        updateUI();
+        showMessage("对决开始！", 1500);
+    }
+
+    function saveHistory() {
+        state.history.push({
+            board: JSON.parse(JSON.stringify(state.board)),
+            redEnergy: state.redEnergy,
+            blackEnergy: state.blackEnergy
+        });
+    }
+
+    function undoMove() {
+        if (state.gameOver || state.history.length < 2 || state.turn !== 'red') return;
+        
+        // 回退两步（人一步，AI一步）
+        state.history.pop(); // AI的走法
+        const prevState = state.history.pop(); // 人的走法
+        
+        state.board = prevState.board;
+        state.redEnergy = prevState.redEnergy;
+        state.blackEnergy = prevState.blackEnergy;
+        state.turn = 'red';
+        state.selectedPiece = null;
+        state.validMoves = [];
+        
+        updateUI();
+    }
+
+    // --- 游戏规则逻辑 ---
+
+    function getPieceColor(pieceId) {
+        if (!pieceId) return null;
+        return pieceId.startsWith('r_') ? 'red' : 'black';
+    }
+
+    function getPieceType(pieceId) {
+        if (!pieceId) return null;
+        return pieceId.substring(2);
+    }
+
+    // 获取所有合法走法
+    function calculateValidMoves(r, c) {
+        const pieceId = state.board[r][c];
+        if (!pieceId) return [];
+        
+        const color = getPieceColor(pieceId);
+        const type = getPieceType(pieceId);
+        const moves = [];
+
+        function addMove(nr, nc) {
+            if (nr >= 0 && nr < 10 && nc >= 0 && nc < 9) {
+                const target = state.board[nr][nc];
+                if (!target || getPieceColor(target) !== color) {
+                    moves.push({r: nr, c: nc});
+                }
+            }
+        }
+
+        if (type === 'che') {
+            for (let i = r - 1; i >= 0; i--) { addMove(i, c); if (state.board[i][c]) break; }
+            for (let i = r + 1; i < 10; i++) { addMove(i, c); if (state.board[i][c]) break; }
+            for (let i = c - 1; i >= 0; i--) { addMove(r, i); if (state.board[r][i]) break; }
+            for (let i = c + 1; i < 9; i++) { addMove(r, i); if (state.board[r][i]) break; }
+        }
+        else if (type === 'ma') {
+            const dirs = [
+                {dr: -2, dc: -1, br: -1, bc: 0}, {dr: -2, dc: 1, br: -1, bc: 0},
+                {dr: 2, dc: -1, br: 1, bc: 0}, {dr: 2, dc: 1, br: 1, bc: 0},
+                {dr: -1, dc: -2, br: 0, bc: -1}, {dr: 1, dc: -2, br: 0, bc: -1},
+                {dr: -1, dc: 2, br: 0, bc: 1}, {dr: 1, dc: 2, br: 0, bc: 1}
+            ];
+            dirs.forEach(d => {
+                if (r + d.br >= 0 && r + d.br < 10 && c + d.bc >= 0 && c + d.bc < 9 && !state.board[r + d.br][c + d.bc]) {
+                    addMove(r + d.dr, c + d.dc);
+                }
+            });
+        }
+        else if (type === 'xiang') {
+            const dirs = [
+                {dr: -2, dc: -2, br: -1, bc: -1}, {dr: -2, dc: 2, br: -1, bc: 1},
+                {dr: 2, dc: -2, br: 1, bc: -1}, {dr: 2, dc: 2, br: 1, bc: 1}
+            ];
+            dirs.forEach(d => {
+                const nr = r + d.dr, nc = c + d.dc;
+                // 不能过河
+                if ((color === 'red' && nr < 5) || (color === 'black' && nr > 4)) return;
+                if (r + d.br >= 0 && r + d.br < 10 && c + d.bc >= 0 && c + d.bc < 9 && !state.board[r + d.br][c + d.bc]) {
+                    addMove(nr, nc);
+                }
+            });
+        }
+        else if (type === 'shi') {
+            const dirs = [{dr: -1, dc: -1}, {dr: -1, dc: 1}, {dr: 1, dc: -1}, {dr: 1, dc: 1}];
+            dirs.forEach(d => {
+                const nr = r + d.dr, nc = c + d.dc;
+                if (nc >= 3 && nc <= 5) {
+                    if ((color === 'red' && nr >= 7 && nr <= 9) || (color === 'black' && nr >= 0 && nr <= 2)) {
+                        addMove(nr, nc);
+                    }
+                }
+            });
+        }
+        else if (type === 'jiang') {
+            const dirs = [{dr: -1, dc: 0}, {dr: 1, dc: 0}, {dr: 0, dc: -1}, {dr: 0, dc: 1}];
+            dirs.forEach(d => {
+                const nr = r + d.dr, nc = c + d.dc;
+                if (nc >= 3 && nc <= 5) {
+                    if ((color === 'red' && nr >= 7 && nr <= 9) || (color === 'black' && nr >= 0 && nr <= 2)) {
+                        addMove(nr, nc);
+                    }
+                }
+            });
+            // 飞将逻辑简化：在AI移动评估时尽量不涉及飞将
+        }
+        else if (type === 'pao') {
+            function calcPaoLine(dr, dc) {
+                let jump = false;
+                let cr = r + dr, cc = c + dc;
+                while (cr >= 0 && cr < 10 && cc >= 0 && cc < 9) {
+                    if (!state.board[cr][cc]) {
+                        if (!jump) addMove(cr, cc);
+                    } else {
+                        if (!jump) {
+                            jump = true;
+                        } else {
+                            if (getPieceColor(state.board[cr][cc]) !== color) addMove(cr, cc);
+                            break;
+                        }
+                    }
+                    cr += dr; cc += dc;
+                }
+            }
+            calcPaoLine(-1, 0); calcPaoLine(1, 0); calcPaoLine(0, -1); calcPaoLine(0, 1);
+        }
+        else if (type === 'bing') {
+            const dr = color === 'red' ? -1 : 1;
+            addMove(r + dr, c);
+            // 过河后可以横着走
+            if ((color === 'red' && r < 5) || (color === 'black' && r > 4)) {
+                addMove(r, c - 1);
+                addMove(r, c + 1);
+            }
+        }
+
+        return moves;
+    }
+
+    // --- 交互与回合推进 ---
+
+    function handleBoardClick(e) {
+        if (state.gameOver || state.turn !== 'red') return;
+
+        const rect = canvas.getBoundingClientRect();
+        // 考虑到 CSS 缩放的影响
+        const scaleX = canvas.width / (rect.width * (window.devicePixelRatio || 1));
+        const scaleY = canvas.height / (rect.height * (window.devicePixelRatio || 1));
+        
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
+        // 转换为网格坐标
+        const c = Math.round((x - CONFIG.offsetX) / CONFIG.cellSize);
+        const r = Math.round((y - CONFIG.offsetY) / CONFIG.cellSize);
+
+        if (r < 0 || r > 9 || c < 0 || c > 8) return;
+
+        const piece = state.board[r][c];
+
+        // 已经选中了棋子
+        if (state.selectedPiece) {
+            const sr = state.selectedPiece.r;
+            const sc = state.selectedPiece.c;
+            
+            // 点击的是合法移动位置
+            if (state.validMoves.some(m => m.r === r && m.c === c)) {
+                executeMove(sr, sc, r, c);
+                return;
+            }
+        }
+
+        // 选择己方棋子
+        if (piece && getPieceColor(piece) === 'red') {
+            state.selectedPiece = {r, c};
+            state.validMoves = calculateValidMoves(r, c);
+        } else {
+            state.selectedPiece = null;
+            state.validMoves = [];
+        }
+    }
+
+    function executeMove(sr, sc, dr, dc) {
+        saveHistory();
+        
+        const piece = state.board[sr][sc];
+        const target = state.board[dr][dc];
+        
+        state.board[dr][dc] = piece;
+        state.board[sr][sc] = null;
+        
+        // 能量计算
+        let energyGain = 10;
+        if (target) energyGain += 10;
+
+        if (state.turn === 'red') {
+            state.redEnergy = Math.min(100, state.redEnergy + energyGain);
+        } else {
+            state.blackEnergy = Math.min(100, state.blackEnergy + energyGain);
+        }
+
+        state.selectedPiece = null;
+        state.validMoves = [];
+
+        // 检查胜利
+        if (target === 'b_jiang') {
+            endGame('red');
+            return;
+        } else if (target === 'r_jiang') {
+            endGame('black');
+            return;
+        }
+
+        // 切换回合
+        state.turn = state.turn === 'red' ? 'black' : 'red';
+        updateUI();
+
+        // AI 回合
+        if (state.turn === 'black' && !state.gameOver) {
+            setTimeout(playAITurn, 500);
+        }
+    }
+
+    // --- AI 逻辑 ---
+
+    function playAITurn() {
+        if (state.gameOver) return;
+
+        // 技能判断
+        if (state.blackEnergy >= 100 && Math.random() > 0.5) {
+            useBlackSkill();
+            return;
+        }
+
+        // 收集所有黑方棋子及合法走法
+        const allMoves = [];
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 9; c++) {
+                if (getPieceColor(state.board[r][c]) === 'black') {
+                    const moves = calculateValidMoves(r, c);
+                    moves.forEach(m => {
+                        // 简单评分机制
+                        let score = 0;
+                        const target = state.board[m.r][m.c];
+                        if (target) {
+                            if (target === 'r_jiang') score += 1000;
+                            else if (getPieceType(target) === 'che') score += 100;
+                            else if (getPieceType(target) === 'pao' || getPieceType(target) === 'ma') score += 50;
+                            else score += 10;
+                        }
+                        // 随机扰动
+                        score += Math.random() * 5;
+                        allMoves.push({sr: r, sc: c, dr: m.r, dc: m.c, score});
+                    });
+                }
+            }
+        }
+
+        if (allMoves.length > 0) {
+            allMoves.sort((a, b) => b.score - a.score);
+            // 选分数最高的（加点随机性防死循环）
+            const bestMove = allMoves[0];
+            executeMove(bestMove.sr, bestMove.sc, bestMove.dr, bestMove.dc);
+        }
+    }
+
+    // --- 技能系统 ---
+
+    function useRedSkill() {
+        if (state.redEnergy < 100 || state.turn !== 'red' || state.gameOver) return;
+        
+        // 找到红方一个可牺牲的棋子（非帅）
+        const redPieces = [];
+        const blackPieces = [];
+        
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 9; c++) {
+                const p = state.board[r][c];
+                if (p && getPieceColor(p) === 'red' && getPieceType(p) !== 'jiang') redPieces.push({r, c});
+                if (p && getPieceColor(p) === 'black' && getPieceType(p) !== 'jiang') blackPieces.push({r, c});
+            }
+        }
+
+        if (redPieces.length > 0 && blackPieces.length > 0) {
+            saveHistory();
+            state.redEnergy = 0;
+            
+            const sac = redPieces[Math.floor(Math.random() * redPieces.length)];
+            const tgt = blackPieces[Math.floor(Math.random() * blackPieces.length)];
+            
+            state.board[sac.r][sac.c] = null;
+            state.board[tgt.r][tgt.c] = null;
+            
+            playSkillAnimation('天地同寿!', '#ef4444');
+            
+            state.turn = 'black';
+            updateUI();
+            setTimeout(playAITurn, 1500);
+        } else {
+            showMessage("施法条件不足！", 1000);
+        }
+    }
+
+    function useBlackSkill() {
+        state.blackEnergy = 0;
+        
+        const redPieces = [];
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 9; c++) {
+                const p = state.board[r][c];
+                if (p && getPieceColor(p) === 'red' && getPieceType(p) !== 'jiang') redPieces.push({r, c});
+            }
+        }
+
+        if (redPieces.length > 0) {
+            const tgt = redPieces[Math.floor(Math.random() * redPieces.length)];
+            state.board[tgt.r][tgt.c] = null;
+            
+            playSkillAnimation('暗影突袭!', '#94a3b8');
+        }
+
+        state.turn = 'red';
+        updateUI();
+    }
+
+    function playSkillAnimation(text, color) {
+        const dpr = window.devicePixelRatio || 1;
+        const w = effectCanvas.width / dpr;
+        const h = effectCanvas.height / dpr;
+        
+        let frame = 0;
+        
+        function anim() {
+            effectCtx.clearRect(0, 0, w, h);
+            
+            if (frame < 60) {
+                const alpha = frame < 10 ? frame / 10 : (frame > 50 ? (60 - frame) / 10 : 1);
+                const scale = 1 + (frame / 60) * 0.5;
+                
+                effectCtx.save();
+                effectCtx.globalAlpha = alpha;
+                effectCtx.translate(w/2, h/2);
+                effectCtx.scale(scale, scale);
+                
+                effectCtx.font = "bold 40px Arial";
+                effectCtx.textAlign = "center";
+                effectCtx.textBaseline = "middle";
+                effectCtx.fillStyle = color;
+                effectCtx.shadowColor = color;
+                effectCtx.shadowBlur = 20;
+                effectCtx.fillText(text, 0, 0);
+                
+                effectCtx.restore();
+                
+                frame++;
+                requestAnimationFrame(anim);
+            } else {
+                effectCtx.clearRect(0, 0, w, h);
+            }
+        }
+        anim();
+    }
+
+    // --- 界面与渲染 ---
+
+    function endGame(winner) {
+        state.gameOver = true;
+        if (winner === 'red') {
+            state.stats.wins++;
+            showMessage("你赢了！", 3000);
+        } else {
+            state.stats.losses++;
+            showMessage("天网获胜", 3000);
+        }
+        saveStats();
+        updateUI();
+    }
+
+    function showMessage(text, duration) {
+        messageOverlay.textContent = text;
+        messageOverlay.className = 'show-message';
+        setTimeout(() => {
+            messageOverlay.className = '';
+        }, duration);
+    }
+
+    function updateUI() {
+        document.getElementById('red-energy').style.width = state.redEnergy + '%';
+        document.getElementById('black-energy').style.width = state.blackEnergy + '%';
+        document.getElementById('red-energy-text').textContent = state.redEnergy + '/100';
+        document.getElementById('black-energy-text').textContent = state.blackEnergy + '/100';
+
+        const btnRedSkill = document.getElementById('btn-red-skill');
+        if (state.redEnergy >= 100) {
+            btnRedSkill.disabled = false;
+            btnRedSkill.classList.add('ready');
+        } else {
+            btnRedSkill.disabled = true;
+            btnRedSkill.classList.remove('ready');
+        }
+
+        const redCard = document.getElementById('red-card');
+        const blackCard = document.getElementById('black-card');
+        
+        if (state.turn === 'red') {
+            redCard.classList.add('active');
+            blackCard.classList.remove('active');
+        } else {
+            blackCard.classList.add('active');
+            redCard.classList.remove('active');
+        }
+    }
+
+    // 核心渲染循环
+    function renderLoop() {
+        drawBoard();
+        requestAnimationFrame(renderLoop);
+    }
+
+    function drawBoard() {
+        const dpr = window.devicePixelRatio || 1;
+        const w = canvas.width / dpr;
+        const h = canvas.height / dpr;
+        
+        ctx.clearRect(0, 0, w, h);
+        
+        const { offsetX: ox, offsetY: oy, cellSize: cs } = CONFIG;
+
+        // 绘制发光网格
+        ctx.strokeStyle = CONFIG.colors.gridLine;
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = CONFIG.colors.gridLine;
+
+        ctx.beginPath();
+        // 横线
+        for (let i = 0; i < 10; i++) {
+            ctx.moveTo(ox, oy + i * cs);
+            ctx.lineTo(ox + 8 * cs, oy + i * cs);
+        }
+        // 竖线 (分两半)
+        for (let i = 0; i < 9; i++) {
+            if (i === 0 || i === 8) {
+                ctx.moveTo(ox + i * cs, oy);
+                ctx.lineTo(ox + i * cs, oy + 9 * cs);
+            } else {
+                ctx.moveTo(ox + i * cs, oy);
+                ctx.lineTo(ox + i * cs, oy + 4 * cs);
+                ctx.moveTo(ox + i * cs, oy + 5 * cs);
+                ctx.lineTo(ox + i * cs, oy + 9 * cs);
+            }
+        }
+        
+        // 九宫格斜线
+        ctx.moveTo(ox + 3 * cs, oy); ctx.lineTo(ox + 5 * cs, oy + 2 * cs);
+        ctx.moveTo(ox + 5 * cs, oy); ctx.lineTo(ox + 3 * cs, oy + 2 * cs);
+        ctx.moveTo(ox + 3 * cs, oy + 7 * cs); ctx.lineTo(ox + 5 * cs, oy + 9 * cs);
+        ctx.moveTo(ox + 5 * cs, oy + 7 * cs); ctx.lineTo(ox + 3 * cs, oy + 9 * cs);
+        
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // 楚河汉界文字
+        ctx.fillStyle = CONFIG.colors.gridLine;
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.globalAlpha = 0.5;
+        ctx.fillText("楚 河", ox + 2 * cs, oy + 4.5 * cs);
+        ctx.fillText("汉 界", ox + 6 * cs, oy + 4.5 * cs);
+        ctx.globalAlpha = 1.0;
+
+        // 绘制合法走法高亮
+        if (state.validMoves.length > 0) {
+            ctx.fillStyle = CONFIG.colors.validMove;
+            state.validMoves.forEach(m => {
+                ctx.beginPath();
+                ctx.arc(ox + m.c * cs, oy + m.r * cs, cs * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // 绘制选中高亮
+        if (state.selectedPiece) {
+            ctx.strokeStyle = CONFIG.colors.select;
+            ctx.lineWidth = 3;
+            const r = state.selectedPiece.r;
+            const c = state.selectedPiece.c;
+            ctx.strokeRect(ox + c * cs - cs * 0.45, oy + r * cs - cs * 0.45, cs * 0.9, cs * 0.9);
+        }
+
+        // 绘制棋子
+        const pieceRadius = cs * 0.4;
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 9; c++) {
+                const pieceId = state.board[r][c];
+                if (pieceId) {
+                    const piece = PIECES[pieceId];
+                    const x = ox + c * cs;
+                    const y = oy + r * cs;
+                    
+                    // 棋子底座（赛博风）
+                    ctx.beginPath();
+                    ctx.arc(x, y, pieceRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = piece.color === 'red' ? CONFIG.colors.red : CONFIG.colors.black;
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = piece.color === 'red' ? CONFIG.colors.redGlow : CONFIG.colors.blackGlow;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+
+                    // 内圈
+                    ctx.beginPath();
+                    ctx.arc(x, y, pieceRadius * 0.8, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // 文字
+                    ctx.fillStyle = piece.color === 'red' ? CONFIG.colors.red : CONFIG.colors.black;
+                    ctx.font = `bold ${cs * 0.4}px Arial`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    // 修正字体垂直偏移
+                    ctx.fillText(piece.text, x, y + cs * 0.05);
+                }
+            }
+        }
+    }
+
+    // 启动
+    window.onload = init;
+})();
+</script>
+
+</body>
+</html>
