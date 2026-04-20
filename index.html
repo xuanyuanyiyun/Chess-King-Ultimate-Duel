@@ -177,16 +177,27 @@
 
 <!-- 规则弹窗 -->
 <div id="help-modal" class="modal">
-    <div class="modal-content">
-        <h2>绝招对决 规则</h2>
-        <p>
-            1. 经典中国象棋规则，红方先行。<br>
-            2. <strong>能量机制</strong>：每走一步积攒10点能量，吃子积攒20点。上限100点。<br>
-            3. <strong>红方绝招【天地同寿】</strong>：满能量手动发动，牺牲己方1个非将帅棋子，摧毁对方1个非将帅棋子。<br>
-            4. <strong>黑方绝招【暗影突袭】</strong>：效果同上。人机模式由AI自动发动。<br>
-            5. <strong>双人同屏</strong>：支持两人轮流操作，可使用“翻转”按钮互换视角。
-        </p>
-        <button id="btn-close-help" class="menu-btn" style="width: 100%; margin: 0;">我明白了</button>
+    <div class="modal-content" style="width: 90%; max-width: 400px;">
+        <h2>象棋王：绝招对决 游戏规则</h2>
+        <div style="font-size: 0.9rem; line-height: 1.6; max-height: 50vh; overflow-y: auto; text-align: left; padding: 10px 5px; color: var(--text);">
+            <p style="margin-bottom: 10px;"><strong>【基础规则】</strong><br>
+            1. 遵循经典中国象棋走子与吃子规则。<br>
+            2. 游戏固定由红方先行，将死对方将/帅即为胜利。</p>
+            
+            <p style="margin-bottom: 10px;"><strong>【能量与绝招系统】</strong><br>
+            1. <strong>积攒能量</strong>：每次移动棋子积攒10点能量，吃掉对方棋子额外积攒10点。能量上限为100点。<br>
+            2. <strong>释放绝招</strong>：当能量达到100满值时，点击下方高亮的技能按钮即可发动绝招。<br>
+            3. <strong>红方绝招【天地同寿】</strong>：随机献祭己方1个非将帅棋子，直接摧毁对方随机1个非将帅棋子。<br>
+            4. <strong>黑方绝招【暗影突袭】</strong>：效果同上。（人机模式下，黑方AI满能量会自动发动）。<br>
+            <span style="color: #94a3b8; font-size: 0.8rem;">* 注意：释放绝招会消耗当前回合。</span></p>
+
+            <p style="margin-bottom: 10px;"><strong>【四大游戏模式】</strong><br>
+            1. <strong>🤖 人机对决</strong>：单人模式，与内置的“天网AI”进行对战。<br>
+            2. <strong>⚔️ 双人同屏</strong>：线下双人模式，两人在同一台设备上轮流操作，可使用“🔄 翻转”按钮互换视角。<br>
+            3. <strong>📨 邀请对决</strong>：离线异地对战。通过互相复制发送“对局码”与“步码”来同步棋局。<br>
+            4. <strong>📖 经典棋谱练习</strong>：内置100关经典残局。按顺序闯关，若红方未按正确套路走子（单关失误超过4次），关卡将自动重置。</p>
+        </div>
+        <button id="btn-close-help" class="menu-btn" style="width: 100%; margin-top: 15px;">我明白了</button>
     </div>
 </div>
 
