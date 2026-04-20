@@ -56,7 +56,8 @@
         }
         
         .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--panel-bg); border: 1px solid var(--primary); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); flex-shrink: 0; }
-        .title { font-size: 1.1rem; font-weight: bold; color: var(--primary); text-shadow: 0 0 5px var(--primary); }
+        .title { font-size: 1.1rem; font-weight: bold; color: var(--primary); text-shadow: 0 0 5px var(--primary); display: flex; flex-direction: column; }
+        .rank-badge { font-size: 0.7rem; color: #fbbf24; margin-top: 2px; text-shadow: none; font-weight: normal; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 4px; padding: 2px 6px; width: fit-content; }
         .stats { display: flex; gap: 10px; font-size: 0.85rem; }
         
         .status-panel { width: 100%; display: flex; justify-content: space-between; margin-bottom: 8px; flex-shrink: 0; gap: 8px; }
@@ -124,7 +125,10 @@
 <!-- 游戏容器 -->
 <div id="game-container">
     <div class="header">
-        <div class="title" id="game-mode-title">人机对决</div>
+        <div class="title">
+            <span id="game-mode-title">人机对决</span>
+            <span id="player-rank" class="rank-badge">🏆 见习棋士</span>
+        </div>
         <div class="stats">
             <span>胜: <span id="win-count" class="red-text">0</span></span>
             <span>负: <span id="loss-count" class="black-text">0</span></span>
@@ -264,6 +268,7 @@ window.addEventListener('error', function(e) {
         effectCtx: document.getElementById('skill-effect').getContext('2d'),
         msg: document.getElementById('message-overlay'),
         modeTitle: document.getElementById('game-mode-title'),
+        playerRank: document.getElementById('player-rank'),
         blackName: document.getElementById('black-name'),
         btnRedSkill: document.getElementById('btn-red-skill'),
         btnBlackSkill: document.getElementById('btn-black-skill')
@@ -355,6 +360,20 @@ window.addEventListener('error', function(e) {
     function updateStatsUI() {
         document.getElementById('win-count').textContent = state.stats.wins;
         document.getElementById('loss-count').textContent = state.stats.losses;
+        
+        // 计算并更新段位
+        const wins = state.stats.wins;
+        let rank = "见习棋士";
+        if (wins >= 100) rank = "象棋王";
+        else if (wins >= 50) rank = "神枢天网";
+        else if (wins >= 30) rank = "领域棋圣";
+        else if (wins >= 20) rank = "雷霆棋尊";
+        else if (wins >= 12) rank = "幻影宗师";
+        else if (wins >= 7) rank = "运筹大师";
+        else if (wins >= 3) rank = "破局精英";
+        else if (wins >= 1) rank = "新锐先锋";
+        
+        UI.playerRank.textContent = `🏆 ${rank}`;
     }
 
     function resizeCanvas() {
