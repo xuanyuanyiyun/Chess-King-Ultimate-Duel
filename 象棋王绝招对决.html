@@ -2,8 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>象棋王：绝招对决 v2.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>象棋王：绝招对决 v2.1</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -13,11 +16,22 @@
             --black: #94a3b8;
             --text: #f8fafc;
             --border: #334155;
+            /* Safe area variables for modern mobile devices (iOS/HarmonyOS) */
+            --safe-area-inset-top: env(safe-area-inset-top, 0px);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
         }
         
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; user-select: none; -webkit-user-select: none; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed; /* Prevent pull-to-refresh on mobile */
+        }
+
         body {
-            background-color: var(--bg-color); color: var(--text); display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden;
+            background-color: var(--bg-color); color: var(--text); display: flex; flex-direction: column; align-items: center; 
             background-image: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%), linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9));
         }
 
@@ -26,52 +40,75 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--bg-color); z-index: 200;
             background-image: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.2) 0%, transparent 70%);
         }
-        .menu-title { font-size: 2.5rem; color: var(--primary); text-shadow: 0 0 15px var(--primary); margin-bottom: 40px; text-align: center; }
+        .menu-title { font-size: 2rem; color: var(--primary); text-shadow: 0 0 15px var(--primary); margin-bottom: 40px; text-align: center; padding: 0 20px; }
         .menu-btn {
-            width: 80%; max-width: 300px; padding: 15px; margin: 10px 0; font-size: 1.2rem; background: var(--panel-bg); color: var(--text); border: 2px solid var(--primary); border-radius: 8px; cursor: pointer; transition: all 0.3s;
+            width: 85%; max-width: 320px; padding: 16px; margin: 10px 0; font-size: 1.1rem; font-weight: bold; background: var(--panel-bg); color: var(--text); border: 2px solid var(--primary); border-radius: 12px; cursor: pointer; transition: all 0.2s;
+            /* Touch target optimization */
+            min-height: 54px;
         }
-        .menu-btn:hover { background: rgba(56, 189, 248, 0.3); box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); transform: scale(1.05); }
+        .menu-btn:active { background: rgba(56, 189, 248, 0.3); box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); transform: scale(0.98); }
 
         /* 游戏界面 */
-        #game-container { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 600px; padding: 10px; flex: 1; }
-        .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--panel-bg); border: 1px solid var(--primary); border-radius: 8px; margin-bottom: 10px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
-        .title { font-size: 1.2rem; font-weight: bold; color: var(--primary); text-shadow: 0 0 5px var(--primary); }
-        .stats { display: flex; gap: 15px; font-size: 0.9rem; }
+        #game-container { 
+            display: none; flex-direction: column; align-items: center; width: 100%; max-width: 600px; 
+            padding: calc(10px + var(--safe-area-inset-top)) 10px calc(10px + var(--safe-area-inset-bottom)) 10px; 
+            height: 100%; 
+        }
         
-        .status-panel { width: 100%; display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .player-card { background: var(--panel-bg); padding: 10px; border-radius: 8px; width: 48%; border: 1px solid var(--border); transition: border-color 0.3s, box-shadow 0.3s; }
+        .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--panel-bg); border: 1px solid var(--primary); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); flex-shrink: 0; }
+        .title { font-size: 1.1rem; font-weight: bold; color: var(--primary); text-shadow: 0 0 5px var(--primary); }
+        .stats { display: flex; gap: 10px; font-size: 0.85rem; }
+        
+        .status-panel { width: 100%; display: flex; justify-content: space-between; margin-bottom: 8px; flex-shrink: 0; gap: 8px; }
+        .player-card { background: var(--panel-bg); padding: 8px 10px; border-radius: 8px; flex: 1; border: 1px solid var(--border); transition: border-color 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; justify-content: space-between; }
         .player-card.active { border-color: var(--primary); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
-        .player-name { font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; font-size: 0.9rem; }
+        .player-name { font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; font-size: 0.8rem; }
         .red-text { color: var(--red); }
         .black-text { color: var(--black); }
         
-        .energy-bar-container { width: 100%; height: 10px; background: #1e293b; border-radius: 5px; overflow: hidden; margin-bottom: 5px; }
+        .energy-bar-container { width: 100%; height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
         .energy-bar { height: 100%; width: 0%; transition: width 0.3s ease; }
         .energy-red { background: linear-gradient(90deg, #b91c1c, #ef4444); }
         .energy-black { background: linear-gradient(90deg, #475569, #94a3b8); }
         
-        .skill-btn { width: 100%; padding: 5px; background: #1e293b; color: #64748b; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; cursor: not-allowed; transition: all 0.3s; }
+        .skill-btn { width: 100%; padding: 6px; background: #1e293b; color: #64748b; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: not-allowed; transition: all 0.3s; touch-action: manipulation; }
         .skill-btn.ready { background: rgba(56, 189, 248, 0.2); color: var(--primary); border-color: var(--primary); cursor: pointer; box-shadow: 0 0 8px rgba(56, 189, 248, 0.5); animation: pulse 1.5s infinite; }
+        .skill-btn.ready:active { transform: scale(0.95); }
         @keyframes pulse { 0% { box-shadow: 0 0 5px rgba(56, 189, 248, 0.4); } 50% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.8); } 100% { box-shadow: 0 0 5px rgba(56, 189, 248, 0.4); } }
 
-        #board-container { position: relative; width: 100%; aspect-ratio: 9/10; margin: 10px 0; background: rgba(15, 23, 42, 0.5); border-radius: 4px; overflow: hidden; box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); }
-        canvas { display: block; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        /* 使棋盘区域自适应剩余空间并保持比例 */
+        #board-container { 
+            position: relative; 
+            width: 100%; 
+            flex: 1; /* 占据剩余空间 */
+            min-height: 0; /* 允许 flex 容器缩放 */
+            margin: 5px 0; 
+            background: rgba(15, 23, 42, 0.5); 
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none; /* 阻止 Canvas 上的默认浏览器触摸行为 */
+        }
+        canvas { display: block; position: absolute; }
         #game-canvas { z-index: 1; }
         #skill-effect { z-index: 5; pointer-events: none; }
 
-        .controls { width: 100%; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .btn { padding: 8px 15px; background: var(--panel-bg); color: var(--text); border: 1px solid var(--primary); border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
-        .btn:hover { background: rgba(56, 189, 248, 0.2); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+        .controls { width: 100%; display: flex; justify-content: space-between; gap: 8px; margin-top: 5px; flex-shrink: 0; padding-bottom: 5px; }
+        .btn { flex: 1; padding: 10px 5px; background: var(--panel-bg); color: var(--text); border: 1px solid var(--primary); border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: all 0.2s; white-space: nowrap; display: flex; justify-content: center; align-items: center; }
+        .btn:active { background: rgba(56, 189, 248, 0.3); transform: scale(0.95); }
 
-        #message-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; font-weight: bold; color: var(--primary); text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary); pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 10; text-align: center; white-space: nowrap; }
+        #message-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.8rem; font-weight: bold; color: var(--primary); text-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary); pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 10; text-align: center; white-space: nowrap; width: 100%; }
         .show-message { opacity: 1 !important; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 
         /* Modal */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: var(--bg-color); border: 1px solid var(--primary); padding: 20px; border-radius: 8px; width: 80%; max-width: 400px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); text-align: center; }
-        .modal h2 { color: var(--primary); margin-bottom: 15px; }
-        .modal p { margin-bottom: 20px; line-height: 1.5; font-size: 0.9rem; text-align: left; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 300; padding: 20px; }
+        .modal-content { background: var(--bg-color); border: 1px solid var(--primary); padding: 25px 20px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); text-align: center; }
+        .modal h2 { color: var(--primary); margin-bottom: 15px; font-size: 1.4rem; }
+        .modal p { margin-bottom: 25px; line-height: 1.6; font-size: 0.95rem; text-align: left; color: #cbd5e1; }
     </style>
 </head>
 <body>
@@ -79,9 +116,9 @@
 <!-- 主菜单 -->
 <div id="main-menu">
     <h1 class="menu-title">象棋王：绝招对决</h1>
-    <button id="btn-start-ai" class="menu-btn">人机对决 (单机)</button>
-    <button id="btn-start-pvp" class="menu-btn">双人联机 (同屏)</button>
-    <button id="btn-menu-help" class="menu-btn" style="margin-top: 30px; font-size: 1rem; padding: 10px; border-color: var(--border);">游戏规则</button>
+    <button id="btn-start-ai" class="menu-btn">🤖 人机对决</button>
+    <button id="btn-start-pvp" class="menu-btn">⚔️ 双人同屏</button>
+    <button id="btn-menu-help" class="menu-btn" style="margin-top: 20px; font-size: 1rem; border-color: var(--border); color: #94a3b8;">📖 游戏规则</button>
 </div>
 
 <!-- 游戏容器 -->
@@ -97,24 +134,24 @@
     <div class="status-panel">
         <div id="black-card" class="player-card">
             <div class="player-name">
-                <span class="black-text" id="black-name">天网 AI (黑方)</span>
+                <span class="black-text" id="black-name">天网 AI</span>
                 <span id="black-energy-text">0/100</span>
             </div>
             <div class="energy-bar-container">
                 <div id="black-energy" class="energy-bar energy-black"></div>
             </div>
-            <button id="btn-black-skill" class="skill-btn" disabled>暗影突袭 (100 SP)</button>
+            <button id="btn-black-skill" class="skill-btn" disabled>暗影突袭 (100)</button>
         </div>
         
         <div id="red-card" class="player-card active">
             <div class="player-name">
-                <span class="red-text" id="red-name">聂无悔 (红方)</span>
+                <span class="red-text" id="red-name">聂无悔</span>
                 <span id="red-energy-text">0/100</span>
             </div>
             <div class="energy-bar-container">
                 <div id="red-energy" class="energy-bar energy-red"></div>
             </div>
-            <button id="btn-red-skill" class="skill-btn" disabled>天地同寿 (100 SP)</button>
+            <button id="btn-red-skill" class="skill-btn" disabled>天地同寿 (100)</button>
         </div>
     </div>
 
@@ -125,7 +162,7 @@
     </div>
 
     <div class="controls">
-        <button id="btn-flip" class="btn">🔄 视角翻转</button>
+        <button id="btn-flip" class="btn">🔄 翻转</button>
         <button id="btn-undo" class="btn">↩️ 悔棋</button>
         <button id="btn-restart" class="btn">🔁 重开</button>
         <button id="btn-exit" class="btn" style="border-color: var(--red); color: var(--red);">退出</button>
@@ -138,22 +175,38 @@
         <h2>绝招对决 规则</h2>
         <p>
             1. 经典中国象棋规则，红方先行。<br>
-            2. <strong>能量机制</strong>：每走一步积攒10点能量(SP)，吃子积攒20点。上限100点。<br>
-            3. <strong>红方绝招【天地同寿】</strong>：能量满时点击发动，牺牲己方场上随机1个非将帅棋子，直接摧毁对方场上随机1个非将帅棋子。<br>
-            4. <strong>黑方绝招【暗影突袭】</strong>：效果同上。在人机模式中，AI满能量时会自动发动。<br>
-            5. <strong>双人同屏</strong>：支持两人在同一设备轮流操作，可使用“视角翻转”按钮互换棋盘方向！
+            2. <strong>能量机制</strong>：每走一步积攒10点能量，吃子积攒20点。上限100点。<br>
+            3. <strong>红方绝招【天地同寿】</strong>：满能量手动发动，牺牲己方1个非将帅棋子，摧毁对方1个非将帅棋子。<br>
+            4. <strong>黑方绝招【暗影突袭】</strong>：效果同上。人机模式由AI自动发动。<br>
+            5. <strong>双人同屏</strong>：支持两人轮流操作，可使用“翻转”按钮互换视角。
         </p>
-        <button id="btn-close-help" class="btn" style="width: 100%">我明白了</button>
+        <button id="btn-close-help" class="menu-btn" style="width: 100%; margin: 0;">我明白了</button>
     </div>
 </div>
 
 <script>
 /**
- * 象棋王：绝招对决 v2.0
- * 包含：单机AI、双人同屏联机、精准棋盘绘制、视角翻转
+ * 象棋王：绝招对决 v2.1
+ * 移动端优化版：全面兼容安卓、鸿蒙、iOS，支持触摸交互，自适应各尺寸屏幕
  */
 
 (function() {
+    // 阻止移动端的双击缩放和默认手势
+    document.addEventListener('touchstart', function(event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+    }, { passive: false });
+    
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, { passive: false });
+
     // --- 核心配置与状态 ---
     const CONFIG = {
         boardCols: 9,
@@ -165,13 +218,15 @@
             highlight: 'rgba(56, 189, 248, 0.4)',
             select: 'rgba(250, 204, 21, 0.6)',
             validMove: 'rgba(34, 197, 94, 0.6)',
-            boardText: 'rgba(56, 189, 248, 0.4)'
-        }
+            boardText: 'rgba(56, 189, 248, 0.3)'
+        },
+        // 动态计算的尺寸
+        renderSize: { w: 0, h: 0, cellSize: 0, offsetX: 0, offsetY: 0 }
     };
 
     let state = {
         mode: 'ai', // 'ai' | 'pvp'
-        board: [], // 10x9 数组。0行为黑底线，9行为红底线。
+        board: [], 
         turn: 'red',
         selectedPiece: null,
         validMoves: [],
@@ -180,13 +235,14 @@
         redEnergy: 0,
         blackEnergy: 0,
         stats: { wins: 0, losses: 0 },
-        isFlipped: false // true 则黑方在下，红方在上
+        isFlipped: false
     };
 
     // DOM 元素
     const UI = {
         menu: document.getElementById('main-menu'),
         game: document.getElementById('game-container'),
+        boardContainer: document.getElementById('board-container'),
         canvas: document.getElementById('game-canvas'),
         ctx: document.getElementById('game-canvas').getContext('2d'),
         effectCanvas: document.getElementById('skill-effect'),
@@ -220,9 +276,20 @@
 
     function init() {
         loadStats();
-        window.addEventListener('resize', resizeCanvas);
         
-        UI.canvas.addEventListener('click', handleBoardClick);
+        // 监听窗口大小变化和屏幕旋转
+        window.addEventListener('resize', () => {
+            if (UI.game.style.display !== 'none') {
+                // 稍微延迟以确保容器尺寸已更新（处理某些移动端浏览器的延迟）
+                setTimeout(resizeCanvas, 100);
+            }
+        });
+        window.addEventListener('orientationchange', () => {
+            setTimeout(resizeCanvas, 200);
+        });
+        
+        // 支持鼠标点击和触摸事件
+        UI.canvas.addEventListener('pointerdown', handleBoardClick);
         
         // 菜单事件
         document.getElementById('btn-start-ai').addEventListener('click', () => startGame('ai'));
@@ -278,8 +345,22 @@
     function resizeCanvas() {
         if (UI.game.style.display === 'none') return;
         
-        const container = document.getElementById('board-container');
+        const container = UI.boardContainer;
         const rect = container.getBoundingClientRect();
+        
+        // 计算最佳棋盘尺寸（保持 9:10 比例）
+        let targetW = rect.width;
+        let targetH = targetW * (10 / 9);
+        
+        if (targetH > rect.height) {
+            targetH = rect.height;
+            targetW = targetH * (9 / 10);
+        }
+        
+        // 居中偏移
+        const padX = (rect.width - targetW) / 2;
+        const padY = (rect.height - targetH) / 2;
+        
         const dpr = window.devicePixelRatio || 1;
         
         UI.canvas.width = rect.width * dpr;
@@ -287,12 +368,26 @@
         UI.effectCanvas.width = rect.width * dpr;
         UI.effectCanvas.height = rect.height * dpr;
         
+        // CSS 实际显示尺寸
+        UI.canvas.style.width = `${rect.width}px`;
+        UI.canvas.style.height = `${rect.height}px`;
+        UI.effectCanvas.style.width = `${rect.width}px`;
+        UI.effectCanvas.style.height = `${rect.height}px`;
+        
         UI.ctx.scale(dpr, dpr);
         UI.effectCtx.scale(dpr, dpr);
         
-        CONFIG.cellSize = Math.min(rect.width / 10, rect.height / 11);
-        CONFIG.offsetX = (rect.width - CONFIG.cellSize * 8) / 2;
-        CONFIG.offsetY = (rect.height - CONFIG.cellSize * 9) / 2;
+        // 留出边缘内边距 (padding) 绘制棋盘
+        const boardPadding = targetW * 0.05; 
+        const usableW = targetW - boardPadding * 2;
+        const usableH = targetH - boardPadding * 2;
+        
+        CONFIG.renderSize.cellSize = Math.min(usableW / 8, usableH / 9);
+        CONFIG.renderSize.w = CONFIG.renderSize.cellSize * 8;
+        CONFIG.renderSize.h = CONFIG.renderSize.cellSize * 9;
+        
+        CONFIG.renderSize.offsetX = padX + (targetW - CONFIG.renderSize.w) / 2;
+        CONFIG.renderSize.offsetY = padY + (targetH - CONFIG.renderSize.h) / 2;
         
         drawBoard();
     }
@@ -306,15 +401,15 @@
         
         if (mode === 'ai') {
             UI.modeTitle.textContent = "人机对决";
-            UI.blackName.textContent = "天网 AI (黑方)";
-            UI.btnBlackSkill.style.display = 'none'; // AI自动放技能
+            UI.blackName.textContent = "天网 AI";
+            UI.btnBlackSkill.style.display = 'none'; 
         } else {
             UI.modeTitle.textContent = "双人同屏";
             UI.blackName.textContent = "玩家2 (黑方)";
             UI.btnBlackSkill.style.display = 'block';
         }
 
-        // 初始化标准棋盘 (0行为黑底线，9行为红底线)
+        // 初始化棋盘
         state.board = Array(10).fill(null).map(() => Array(9).fill(null));
         state.board[0] = ['b_che', 'b_ma', 'b_xiang', 'b_shi', 'b_jiang', 'b_shi', 'b_xiang', 'b_ma', 'b_che'];
         state.board[2][1] = 'b_pao'; state.board[2][7] = 'b_pao';
@@ -332,9 +427,12 @@
         state.redEnergy = 0;
         state.blackEnergy = 0;
         
-        resizeCanvas();
-        updateUI();
-        showMessage(mode === 'ai' ? "对决开始！" : "双人联机！", 1500);
+        // 延迟调用以确保布局计算正确
+        setTimeout(() => {
+            resizeCanvas();
+            updateUI();
+            showMessage(mode === 'ai' ? "对决开始！" : "双人联机！", 1500);
+        }, 50);
     }
 
     function saveHistory() {
@@ -350,17 +448,14 @@
         if (state.gameOver || state.history.length === 0) return;
         
         if (state.mode === 'ai') {
-            // 人机模式回退两步
             if (state.history.length < 2 || state.turn !== 'red') return;
             state.history.pop();
-            const prev = state.history.pop();
-            restoreState(prev);
+            restoreState(state.history.pop());
         } else {
-            // PvP模式回退一步
-            const prev = state.history.pop();
-            restoreState(prev);
+            restoreState(state.history.pop());
         }
         updateUI();
+        drawBoard();
     }
 
     function restoreState(prevState) {
@@ -372,20 +467,11 @@
         state.validMoves = [];
     }
 
-    // --- 坐标转换 (支持视角翻转) ---
-    
-    // 逻辑坐标 -> 渲染坐标
-    function getRenderPos(r, c) {
-        return state.isFlipped ? { r: 9 - r, c: 8 - c } : { r, c };
-    }
-    
-    // 渲染坐标 -> 逻辑坐标
-    function getLogicPos(renderR, renderC) {
-        return state.isFlipped ? { r: 9 - renderR, c: 8 - renderC } : { r: renderR, c: renderC };
-    }
+    // --- 坐标转换 ---
+    function getRenderPos(r, c) { return state.isFlipped ? { r: 9 - r, c: 8 - c } : { r, c }; }
+    function getLogicPos(renderR, renderC) { return state.isFlipped ? { r: 9 - renderR, c: 8 - renderC } : { r: renderR, c: renderC }; }
 
     // --- 游戏规则逻辑 ---
-
     function getPieceColor(id) { return id ? (id.startsWith('r_') ? 'red' : 'black') : null; }
     function getPieceType(id) { return id ? id.substring(2) : null; }
 
@@ -410,9 +496,7 @@
         } else if (type === 'ma') {
             [{dr:-2,dc:-1,br:-1,bc:0},{dr:-2,dc:1,br:-1,bc:0},{dr:2,dc:-1,br:1,bc:0},{dr:2,dc:1,br:1,bc:0},
              {dr:-1,dc:-2,br:0,bc:-1},{dr:1,dc:-2,br:0,bc:-1},{dr:-1,dc:2,br:0,bc:1},{dr:1,dc:2,br:0,bc:1}]
-            .forEach(d => {
-                if(r+d.br>=0 && r+d.br<10 && c+d.bc>=0 && c+d.bc<9 && !state.board[r+d.br][c+d.bc]) addMove(r+d.dr, c+d.dc);
-            });
+            .forEach(d => { if(r+d.br>=0 && r+d.br<10 && c+d.bc>=0 && c+d.bc<9 && !state.board[r+d.br][c+d.bc]) addMove(r+d.dr, c+d.dc); });
         } else if (type === 'xiang') {
             [{dr:-2,dc:-2,br:-1,bc:-1},{dr:-2,dc:2,br:-1,bc:1},{dr:2,dc:-2,br:1,bc:-1},{dr:2,dc:2,br:1,bc:1}]
             .forEach(d => {
@@ -455,23 +539,41 @@
 
     function handleBoardClick(e) {
         if (state.gameOver) return;
-        // 人机模式下，非玩家回合禁止操作
         if (state.mode === 'ai' && state.turn !== 'red') return;
 
-        const rect = UI.canvas.getBoundingClientRect();
-        const scaleX = UI.canvas.width / (rect.width * (window.devicePixelRatio || 1));
-        const scaleY = UI.canvas.height / (rect.height * (window.devicePixelRatio || 1));
+        // 支持 pointer 事件以完美兼容移动端触摸
+        e.preventDefault();
         
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+        const rect = UI.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-        const renderC = Math.round((x - CONFIG.offsetX) / CONFIG.cellSize);
-        const renderR = Math.round((y - CONFIG.offsetY) / CONFIG.cellSize);
+        const { offsetX, offsetY, cellSize } = CONFIG.renderSize;
+        
+        // 增加触摸判定范围 (容错率)
+        const touchTolerance = cellSize * 0.4;
+        
+        let targetRenderC = -1;
+        let targetRenderR = -1;
+        let minDistance = touchTolerance;
+        
+        // 遍历寻找最近的交叉点
+        for(let r=0; r<10; r++) {
+            for(let c=0; c<9; c++) {
+                const pX = offsetX + c * cellSize;
+                const pY = offsetY + r * cellSize;
+                const dist = Math.sqrt(Math.pow(x - pX, 2) + Math.pow(y - pY, 2));
+                if(dist < minDistance) {
+                    minDistance = dist;
+                    targetRenderC = c;
+                    targetRenderR = r;
+                }
+            }
+        }
 
-        if (renderR < 0 || renderR > 9 || renderC < 0 || renderC > 8) return;
+        if (targetRenderR === -1 || targetRenderC === -1) return;
 
-        // 转换为逻辑坐标
-        const { r, c } = getLogicPos(renderR, renderC);
+        const { r, c } = getLogicPos(targetRenderR, targetRenderC);
         const piece = state.board[r][c];
 
         if (state.selectedPiece) {
@@ -482,7 +584,6 @@
             }
         }
 
-        // 只能选中当前回合颜色的棋子
         if (piece && getPieceColor(piece) === state.turn) {
             state.selectedPiece = {r, c};
             state.validMoves = calculateValidMoves(r, c);
@@ -490,6 +591,7 @@
             state.selectedPiece = null;
             state.validMoves = [];
         }
+        drawBoard();
     }
 
     function executeMove(sr, sc, dr, dc) {
@@ -501,7 +603,6 @@
         state.board[dr][dc] = piece;
         state.board[sr][sc] = null;
         
-        // 能量
         let gain = target ? 20 : 10;
         if (state.turn === 'red') state.redEnergy = Math.min(100, state.redEnergy + gain);
         else state.blackEnergy = Math.min(100, state.blackEnergy + gain);
@@ -509,12 +610,12 @@
         state.selectedPiece = null;
         state.validMoves = [];
 
-        // 胜负判定
         if (target === 'b_jiang') { endGame('red'); return; }
         if (target === 'r_jiang') { endGame('black'); return; }
 
         state.turn = state.turn === 'red' ? 'black' : 'red';
         updateUI();
+        drawBoard();
 
         if (state.mode === 'ai' && state.turn === 'black' && !state.gameOver) {
             setTimeout(playAITurn, 600);
@@ -522,7 +623,6 @@
     }
 
     // --- AI 逻辑 ---
-
     function playAITurn() {
         if (state.gameOver) return;
 
@@ -556,7 +656,6 @@
     }
 
     // --- 绝招系统 ---
-
     function useSkill(color) {
         if (state.gameOver || state.turn !== color) return;
         if (color === 'red' && state.redEnergy < 100) return;
@@ -587,6 +686,7 @@
             
             state.turn = state.turn === 'red' ? 'black' : 'red';
             updateUI();
+            drawBoard();
             
             if (state.mode === 'ai' && state.turn === 'black') {
                 setTimeout(playAITurn, 1500);
@@ -599,6 +699,10 @@
     function playSkillAnimation(text, color) {
         const w = UI.effectCanvas.width, h = UI.effectCanvas.height;
         let frame = 0;
+        
+        // 移动端缩放字体大小
+        const fontSize = Math.min(w / 6, 60);
+        
         function anim() {
             UI.effectCtx.clearRect(0, 0, w, h);
             if (frame < 60) {
@@ -608,7 +712,7 @@
                 UI.effectCtx.globalAlpha = alpha;
                 UI.effectCtx.translate(w/2, h/2);
                 UI.effectCtx.scale(scale, scale);
-                UI.effectCtx.font = "bold 40px Arial";
+                UI.effectCtx.font = `bold ${fontSize}px Arial`;
                 UI.effectCtx.textAlign = "center"; UI.effectCtx.textBaseline = "middle";
                 UI.effectCtx.fillStyle = color; UI.effectCtx.shadowColor = color; UI.effectCtx.shadowBlur = 20;
                 UI.effectCtx.fillText(text, 0, 0);
@@ -620,7 +724,6 @@
     }
 
     // --- 界面与渲染 ---
-
     function endGame(winner) {
         state.gameOver = true;
         if (winner === 'red') { state.stats.wins++; showMessage("红方 胜！", 3000); }
@@ -653,12 +756,16 @@
         else { bc.classList.add('active'); rc.classList.remove('active'); }
     }
 
+    // 使用标志位优化重绘频率
+    let needsRedraw = false;
     function renderLoop() {
-        if (UI.game.style.display !== 'none') drawBoard();
+        if (needsRedraw && UI.game.style.display !== 'none') {
+            drawBoard();
+            needsRedraw = false;
+        }
         requestAnimationFrame(renderLoop);
     }
 
-    // 绘制炮/兵的位置十字标记
     function drawCrossMarks(ox, oy, cs) {
         UI.ctx.strokeStyle = CONFIG.colors.gridLine;
         UI.ctx.lineWidth = 1.5;
@@ -667,8 +774,8 @@
             const { r: renderR, c: renderC } = getRenderPos(logicR, logicC);
             const x = ox + renderC * cs;
             const y = oy + renderR * cs;
-            const o = cs * 0.08; // gap
-            const l = cs * 0.15; // len
+            const o = cs * 0.08; 
+            const l = cs * 0.15; 
 
             UI.ctx.beginPath();
             if (!hideRight) {
@@ -682,19 +789,18 @@
             UI.ctx.stroke();
         };
 
-        // 炮
         drawMark(2, 1); drawMark(2, 7); drawMark(7, 1); drawMark(7, 7);
-        // 黑卒
         drawMark(3, 0, true, false); drawMark(3, 2); drawMark(3, 4); drawMark(3, 6); drawMark(3, 8, false, true);
-        // 红兵
         drawMark(6, 0, true, false); drawMark(6, 2); drawMark(6, 4); drawMark(6, 6); drawMark(6, 8, false, true);
     }
 
     function drawBoard() {
+        if (!CONFIG.renderSize.cellSize) return; // 尚未计算好尺寸
+        
         const w = UI.canvas.width, h = UI.canvas.height;
         UI.ctx.clearRect(0, 0, w, h);
         
-        const { offsetX: ox, offsetY: oy, cellSize: cs } = CONFIG;
+        const { offsetX: ox, offsetY: oy, cellSize: cs } = CONFIG.renderSize;
 
         // 绘制网格
         UI.ctx.strokeStyle = CONFIG.colors.gridLine;
@@ -709,7 +815,6 @@
             else { UI.ctx.moveTo(ox + i*cs, oy); UI.ctx.lineTo(ox + i*cs, oy + 4*cs); UI.ctx.moveTo(ox + i*cs, oy + 5*cs); UI.ctx.lineTo(ox + i*cs, oy + 9*cs); }
         }
         
-        // 九宫格
         UI.ctx.moveTo(ox + 3*cs, oy); UI.ctx.lineTo(ox + 5*cs, oy + 2*cs);
         UI.ctx.moveTo(ox + 5*cs, oy); UI.ctx.lineTo(ox + 3*cs, oy + 2*cs);
         UI.ctx.moveTo(ox + 3*cs, oy + 7*cs); UI.ctx.lineTo(ox + 5*cs, oy + 9*cs);
@@ -717,9 +822,8 @@
         UI.ctx.stroke();
         UI.ctx.shadowBlur = 0;
 
-        // 楚河汉界文字 (根据翻转调整)
         UI.ctx.fillStyle = CONFIG.colors.boardText;
-        UI.ctx.font = `bold ${cs * 0.5}px Arial`;
+        UI.ctx.font = `bold ${cs * 0.6}px Arial`;
         UI.ctx.textAlign = "center"; UI.ctx.textBaseline = "middle";
         if (state.isFlipped) {
             UI.ctx.save(); UI.ctx.translate(ox + 4*cs, oy + 4.5*cs); UI.ctx.rotate(Math.PI);
@@ -728,27 +832,24 @@
             UI.ctx.fillText("楚 河", ox + 2*cs, oy + 4.5*cs); UI.ctx.fillText("汉 界", ox + 6*cs, oy + 4.5*cs);
         }
 
-        // 炮/兵位置十字标记
         drawCrossMarks(ox, oy, cs);
 
-        // 合法走法高亮
         if (state.validMoves.length > 0) {
             UI.ctx.fillStyle = CONFIG.colors.validMove;
             state.validMoves.forEach(m => {
-                const renderPos = getRenderPos(m.r, m.c);
-                UI.ctx.beginPath(); UI.ctx.arc(ox + renderPos.c*cs, oy + renderPos.r*cs, cs * 0.15, 0, Math.PI * 2); UI.ctx.fill();
+                const rp = getRenderPos(m.r, m.c);
+                UI.ctx.beginPath(); UI.ctx.arc(ox + rp.c*cs, oy + rp.r*cs, cs * 0.15, 0, Math.PI * 2); UI.ctx.fill();
             });
         }
 
-        // 选中高亮
         if (state.selectedPiece) {
             UI.ctx.strokeStyle = CONFIG.colors.select; UI.ctx.lineWidth = 3;
             const rp = getRenderPos(state.selectedPiece.r, state.selectedPiece.c);
-            UI.ctx.strokeRect(ox + rp.c*cs - cs*0.45, oy + rp.r*cs - cs*0.45, cs*0.9, cs*0.9);
+            // 移动端稍大一点的选中框
+            UI.ctx.strokeRect(ox + rp.c*cs - cs*0.48, oy + rp.r*cs - cs*0.48, cs*0.96, cs*0.96);
         }
 
-        // 绘制棋子
-        const pR = cs * 0.42;
+        const pR = cs * 0.44; // 稍微增大棋子以便点击
         for (let r = 0; r < 10; r++) {
             for (let c = 0; c < 9; c++) {
                 const id = state.board[r][c];
@@ -761,7 +862,7 @@
                     UI.ctx.fillStyle = '#1e293b'; UI.ctx.fill();
                     
                     UI.ctx.strokeStyle = p.color === 'red' ? CONFIG.colors.red : CONFIG.colors.black;
-                    UI.ctx.lineWidth = 2; UI.ctx.shadowBlur = 10;
+                    UI.ctx.lineWidth = 2; UI.ctx.shadowBlur = 8;
                     UI.ctx.shadowColor = p.color === 'red' ? CONFIG.colors.redGlow : CONFIG.colors.blackGlow;
                     UI.ctx.stroke(); UI.ctx.shadowBlur = 0;
 
@@ -769,10 +870,9 @@
                     UI.ctx.strokeStyle = '#334155'; UI.ctx.lineWidth = 1; UI.ctx.stroke();
 
                     UI.ctx.fillStyle = p.color === 'red' ? CONFIG.colors.red : CONFIG.colors.black;
-                    UI.ctx.font = `bold ${cs * 0.45}px "KaiTi", "STKaiti", serif`;
+                    UI.ctx.font = `bold ${cs * 0.45}px -apple-system, "KaiTi", "STKaiti", serif`;
                     UI.ctx.textAlign = "center"; UI.ctx.textBaseline = "middle";
                     
-                    // 如果棋盘翻转，且棋子文字需要正对玩家
                     UI.ctx.save();
                     UI.ctx.translate(x, y);
                     if (state.isFlipped) UI.ctx.rotate(Math.PI);
