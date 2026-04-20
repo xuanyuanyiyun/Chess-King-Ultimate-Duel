@@ -223,6 +223,16 @@
     </div>
 </div>
 
+<div id="win-modal" class="modal">
+    <div class="modal-content">
+        <h2 id="win-title">胜利</h2>
+        <p id="win-desc">是否立刻再来一局，或进入经典棋谱练习？</p>
+        <button id="btn-win-restart" class="menu-btn" style="width: 100%; margin: 0;">再来一局</button>
+        <button id="btn-win-practice" class="menu-btn" style="width: 100%; margin-top: 10px;">经典棋谱练习</button>
+        <button id="btn-win-close" class="menu-btn" style="width: 100%; margin-top: 10px; border-color: var(--border); color: #94a3b8;">关闭</button>
+    </div>
+</div>
+
 <script>
 /**
  * 象棋王：绝招对决 v2.1
@@ -281,7 +291,8 @@ window.addEventListener('error', function(e) {
         blackEnergy: 0,
         stats: { wins: 0, losses: 0 },
         isFlipped: false,
-        share: { roomId: '', myColor: 'red', seq: 0 }
+        share: { roomId: '', myColor: 'red', seq: 0 },
+        practice: { id: '', title: '', goal: '' }
     };
 
     // DOM 元素
@@ -308,7 +319,10 @@ window.addEventListener('error', function(e) {
         syncOutput: document.getElementById('sync-output'),
         syncInput: document.getElementById('sync-input'),
         btnSyncCopy: document.getElementById('btn-sync-copy'),
-        btnSyncApply: document.getElementById('btn-sync-apply')
+        btnSyncApply: document.getElementById('btn-sync-apply'),
+        winModal: document.getElementById('win-modal'),
+        winTitle: document.getElementById('win-title'),
+        winDesc: document.getElementById('win-desc')
     };
 
     const PIECES = {
@@ -328,6 +342,47 @@ window.addEventListener('error', function(e) {
         'b_pao': { text: '炮', type: 'pao', color: 'black' },
         'b_bing': { text: '卒', type: 'bing', color: 'black' }
     };
+
+    const PRACTICES = [
+        {
+            id: 'P1',
+            title: '一招制胜：车直取将',
+            goal: '红方先行，直接吃掉对方将。',
+            snapshot: (() => {
+                const board = Array(10).fill(null).map(() => Array(9).fill(null));
+                board[0][4] = 'b_jiang';
+                board[1][4] = 'r_che';
+                board[9][4] = 'r_jiang';
+                return { board, redEnergy: 0, blackEnergy: 0, turn: 'red' };
+            })()
+        },
+        {
+            id: 'P2',
+            title: '炮翻山：隔子轰将',
+            goal: '红方先行，利用炮的隔子吃子规则吃掉对方将。',
+            snapshot: (() => {
+                const board = Array(10).fill(null).map(() => Array(9).fill(null));
+                board[0][4] = 'b_jiang';
+                board[1][4] = 'b_bing';
+                board[2][4] = 'r_pao';
+                board[9][4] = 'r_jiang';
+                return { board, redEnergy: 0, blackEnergy: 0, turn: 'red' };
+            })()
+        },
+        {
+            id: 'P3',
+            title: '踏破中宫：车横扫',
+            goal: '红方先行，找到通路吃掉对方将。',
+            snapshot: (() => {
+                const board = Array(10).fill(null).map(() => Array(9).fill(null));
+                board[0][4] = 'b_jiang';
+                board[0][3] = 'b_shi';
+                board[1][3] = 'r_che';
+                board[9][4] = 'r_jiang';
+                return { board, redEnergy: 0, blackEnergy: 0, turn: 'red' };
+            })()
+        }
+    ];
 
     function randomRoomId() {
         return Math.random().toString(36).slice(2, 8).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -402,6 +457,29 @@ window.addEventListener('error', function(e) {
         state.selectedPiece = null;
         state.validMoves = [];
         state.gameOver = false;
+    }
+
+    function startPractice() {
+        const pick = PRACTICES[Math.floor(Math.random() * PRACTICES.length)];
+        state.practice.id = pick.id;
+        state.practice.title = pick.title;
+        state.practice.goal = pick.goal;
+        state.share.roomId = '';
+        state.share.myColor = 'red';
+        state.share.seq = 0;
+        startGame('practice', pick.snapshot);
+        setTimeout(() => {
+            showMessage(pick.title, 1400);
+        }, 80);
+    }
+
+    function openWinModal(winner) {
+        const title = winner === 'red' ? '红方胜利' : '黑方胜利';
+        UI.winTitle.textContent = title;
+        UI.winDesc.textContent = state.mode === 'practice'
+            ? `练习完成：${state.practice.title}。是否立刻再来一局，或继续经典棋谱练习？`
+            : '是否立刻再来一局，或进入经典棋谱练习？';
+        UI.winModal.style.display = 'flex';
     }
 
     // --- 初始化 ---
@@ -525,6 +603,28 @@ window.addEventListener('error', function(e) {
             document.getElementById('help-modal').style.display = 'none';
         });
 
+        document.getElementById('btn-win-close').addEventListener('click', () => {
+            UI.winModal.style.display = 'none';
+        });
+        document.getElementById('btn-win-restart').addEventListener('click', () => {
+            UI.winModal.style.display = 'none';
+            if (state.mode === 'share') {
+                UI.game.style.display = 'none';
+                UI.menu.style.display = 'flex';
+                openInviteModal();
+                return;
+            }
+            if (state.mode === 'practice') {
+                startPractice();
+                return;
+            }
+            startGame(state.mode);
+        });
+        document.getElementById('btn-win-practice').addEventListener('click', () => {
+            UI.winModal.style.display = 'none';
+            startPractice();
+        });
+
         requestAnimationFrame(renderLoop);
     }
 
@@ -630,11 +730,16 @@ window.addEventListener('error', function(e) {
             UI.blackName.textContent = "玩家2 (黑方)";
             UI.btnBlackSkill.style.display = 'block';
             document.getElementById('btn-undo').textContent = '↩️ 悔棋';
-        } else {
+        } else if (mode === 'share') {
             UI.modeTitle.textContent = "邀请对决";
             UI.blackName.textContent = "远端对手";
             UI.btnBlackSkill.style.display = 'block';
             document.getElementById('btn-undo').textContent = '📥 导入';
+        } else {
+            UI.modeTitle.textContent = "棋谱练习";
+            UI.blackName.textContent = "练习目标";
+            UI.btnBlackSkill.style.display = 'none';
+            document.getElementById('btn-undo').textContent = '↩️ 悔棋';
         }
 
         if (snapshot) {
@@ -663,7 +768,7 @@ window.addEventListener('error', function(e) {
         setTimeout(() => {
             resizeCanvas();
             updateUI();
-            showMessage(mode === 'ai' ? "对决开始！" : (mode === 'pvp' ? "同屏对决！" : "邀请对决！"), 1500);
+            showMessage(mode === 'ai' ? "对决开始！" : (mode === 'pvp' ? "同屏对决！" : (mode === 'share' ? "邀请对决！" : "开始练习！")), 1500);
         }, 50);
     }
 
@@ -773,6 +878,7 @@ window.addEventListener('error', function(e) {
         if (state.gameOver) return;
         if (state.mode === 'ai' && state.turn !== 'red') return;
         if (state.mode === 'share' && state.turn !== state.share.myColor) return;
+        if (state.mode === 'practice' && state.turn !== 'red') return;
 
         // 支持 pointer 事件以完美兼容移动端触摸
         e.preventDefault();
@@ -865,6 +971,7 @@ window.addEventListener('error', function(e) {
     // --- AI 逻辑 ---
     function playAITurn() {
         if (state.gameOver) return;
+        if (state.mode !== 'ai') return;
 
         if (state.blackEnergy >= 100) {
             useSkill('black');
@@ -927,6 +1034,13 @@ window.addEventListener('error', function(e) {
             state.turn = state.turn === 'red' ? 'black' : 'red';
             updateUI();
             drawBoard();
+
+            if (state.mode === 'share') {
+                state.share.seq += 1;
+                const payload = { v: 1, kind: 'move', roomId: state.share.roomId, seq: state.share.seq, snapshot: getSnapshot() };
+                openSyncModalForSend(encodePayload(payload));
+                return;
+            }
             
             if (state.mode === 'ai' && state.turn === 'black') {
                 setTimeout(playAITurn, 1500);
@@ -966,9 +1080,12 @@ window.addEventListener('error', function(e) {
     // --- 界面与渲染 ---
     function endGame(winner) {
         state.gameOver = true;
-        if (winner === 'red') { state.stats.wins++; showMessage("红方 胜！", 3000); }
-        else { state.stats.losses++; showMessage("黑方 胜！", 3000); }
-        saveStats(); updateUI();
+        if (winner === 'red') { state.stats.wins++; }
+        else { state.stats.losses++; }
+        saveStats(); 
+        updateUI();
+        drawBoard();
+        setTimeout(() => openWinModal(winner), 80);
     }
 
     function showMessage(text, duration) {
@@ -1089,7 +1206,7 @@ window.addEventListener('error', function(e) {
             UI.ctx.strokeRect(ox + rp.c*cs - cs*0.48, oy + rp.r*cs - cs*0.48, cs*0.96, cs*0.96);
         }
 
-        const pR = cs * 0.44; // 稍微增大棋子以便点击
+        const pR = cs * 0.44;
         for (let r = 0; r < 10; r++) {
             for (let c = 0; c < 9; c++) {
                 const id = state.board[r][c];
@@ -1098,18 +1215,49 @@ window.addEventListener('error', function(e) {
                     const rp = getRenderPos(r, c);
                     const x = ox + rp.c*cs, y = oy + rp.r*cs;
                     
-                    UI.ctx.beginPath(); UI.ctx.arc(x, y, pR, 0, Math.PI*2);
-                    UI.ctx.fillStyle = '#1e293b'; UI.ctx.fill();
+                    const rim = p.color === 'red' ? CONFIG.colors.red : CONFIG.colors.black;
+                    const rimGlow = p.color === 'red' ? CONFIG.colors.redGlow : CONFIG.colors.blackGlow;
+                    const baseGrad = UI.ctx.createRadialGradient(x - pR * 0.35, y - pR * 0.35, pR * 0.2, x, y, pR);
+                    baseGrad.addColorStop(0, 'rgba(71, 85, 105, 0.95)');
+                    baseGrad.addColorStop(0.6, 'rgba(30, 41, 59, 0.95)');
+                    baseGrad.addColorStop(1, 'rgba(2, 6, 23, 0.98)');
+
+                    UI.ctx.save();
+                    UI.ctx.shadowBlur = 14;
+                    UI.ctx.shadowColor = rimGlow;
+                    UI.ctx.beginPath();
+                    UI.ctx.arc(x, y, pR, 0, Math.PI * 2);
+                    UI.ctx.fillStyle = baseGrad;
+                    UI.ctx.fill();
+                    UI.ctx.restore();
                     
-                    UI.ctx.strokeStyle = p.color === 'red' ? CONFIG.colors.red : CONFIG.colors.black;
-                    UI.ctx.lineWidth = 2; UI.ctx.shadowBlur = 8;
-                    UI.ctx.shadowColor = p.color === 'red' ? CONFIG.colors.redGlow : CONFIG.colors.blackGlow;
-                    UI.ctx.stroke(); UI.ctx.shadowBlur = 0;
+                    UI.ctx.save();
+                    UI.ctx.lineWidth = 2.5;
+                    UI.ctx.shadowBlur = 10;
+                    UI.ctx.shadowColor = rimGlow;
+                    UI.ctx.strokeStyle = rim;
+                    UI.ctx.beginPath();
+                    UI.ctx.arc(x, y, pR, 0, Math.PI * 2);
+                    UI.ctx.stroke();
+                    UI.ctx.restore();
 
-                    UI.ctx.beginPath(); UI.ctx.arc(x, y, pR*0.8, 0, Math.PI*2);
-                    UI.ctx.strokeStyle = '#334155'; UI.ctx.lineWidth = 1; UI.ctx.stroke();
+                    UI.ctx.save();
+                    UI.ctx.lineWidth = 1.5;
+                    UI.ctx.strokeStyle = 'rgba(203, 213, 225, 0.18)';
+                    UI.ctx.beginPath();
+                    UI.ctx.arc(x, y, pR * 0.78, 0, Math.PI * 2);
+                    UI.ctx.stroke();
+                    UI.ctx.restore();
 
-                    UI.ctx.fillStyle = p.color === 'red' ? CONFIG.colors.red : CONFIG.colors.black;
+                    UI.ctx.save();
+                    UI.ctx.globalAlpha = 0.35;
+                    UI.ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
+                    UI.ctx.beginPath();
+                    UI.ctx.ellipse(x - pR * 0.18, y - pR * 0.22, pR * 0.28, pR * 0.18, -0.6, 0, Math.PI * 2);
+                    UI.ctx.fill();
+                    UI.ctx.restore();
+
+                    UI.ctx.fillStyle = rim;
                     UI.ctx.font = `bold ${cs * 0.45}px -apple-system, "KaiTi", "STKaiti", serif`;
                     UI.ctx.textAlign = "center"; UI.ctx.textBaseline = "middle";
                     
