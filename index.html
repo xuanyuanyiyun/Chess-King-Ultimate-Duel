@@ -48,7 +48,7 @@
         }
         .menu-btn:active { background: rgba(56, 189, 248, 0.3); box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); transform: scale(0.98); }
 
-        /* 游戏界面 */
+        /* 对战界面 */
         #game-container { 
             display: none; flex-direction: column; align-items: center; width: 100%; max-width: 600px; 
             padding: calc(10px + var(--safe-area-inset-top)) 10px calc(10px + var(--safe-area-inset-bottom)) 10px; 
@@ -110,6 +110,7 @@
         .modal-content { background: var(--bg-color); border: 1px solid var(--primary); padding: 25px 20px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); text-align: center; }
         .modal h2 { color: var(--primary); margin-bottom: 15px; font-size: 1.4rem; }
         .modal p { margin-bottom: 25px; line-height: 1.6; font-size: 0.95rem; text-align: left; color: #cbd5e1; }
+        .code-text { width: 100%; min-height: 90px; resize: none; background: rgba(2, 6, 23, 0.6); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; outline: none; margin: 12px 0; font-size: 0.85rem; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -119,10 +120,11 @@
     <h1 class="menu-title">象棋王：绝招对决</h1>
     <button id="btn-start-ai" class="menu-btn">🤖 人机对决</button>
     <button id="btn-start-pvp" class="menu-btn">⚔️ 双人同屏</button>
-    <button id="btn-menu-help" class="menu-btn" style="margin-top: 20px; font-size: 1rem; border-color: var(--border); color: #94a3b8;">📖 游戏规则</button>
+    <button id="btn-start-share" class="menu-btn">📨 邀请对决</button>
+    <button id="btn-menu-help" class="menu-btn" style="margin-top: 20px; font-size: 1rem; border-color: var(--border); color: #94a3b8;">📖 规则说明</button>
 </div>
 
-<!-- 游戏容器 -->
+<!-- 对战界面 -->
 <div id="game-container">
     <div class="header">
         <div class="title">
@@ -193,9 +195,33 @@
         <div class="modal-content">
             <h2 style="color: var(--red);">系统提示</h2>
             <p id="error-message">哎呀，出错了，请重启试试吧~</p>
-            <button onclick="window.location.reload()" class="menu-btn" style="width: 100%; margin: 0;">重启游戏</button>
+            <button onclick="window.location.reload()" class="menu-btn" style="width: 100%; margin: 0;">重新加载</button>
         </div>
     </div>
+
+<div id="invite-modal" class="modal">
+    <div class="modal-content">
+        <h2>邀请分享</h2>
+        <p>创建方生成“对局码”发送给对方；加入方粘贴对局码即可开始对决。此方式不进行任何网络请求。</p>
+        <button id="btn-invite-create" class="menu-btn" style="width: 100%; margin: 0;">生成对局码（红方）</button>
+        <textarea id="invite-output" class="code-text" readonly placeholder="这里会显示对局码"></textarea>
+        <textarea id="invite-input" class="code-text" placeholder="在此粘贴对方发来的对局码"></textarea>
+        <button id="btn-invite-join" class="menu-btn" style="width: 100%; margin: 0;">加入对决（黑方）</button>
+        <button id="btn-invite-close" class="menu-btn" style="width: 100%; margin-top: 10px; border-color: var(--border); color: #94a3b8;">关闭</button>
+    </div>
+</div>
+
+<div id="sync-modal" class="modal">
+    <div class="modal-content">
+        <h2 id="sync-title">步码分享</h2>
+        <p id="sync-desc"></p>
+        <textarea id="sync-output" class="code-text" readonly placeholder="这里会显示要分享给对方的步码"></textarea>
+        <textarea id="sync-input" class="code-text" placeholder="在此粘贴对方发来的步码"></textarea>
+        <button id="btn-sync-copy" class="menu-btn" style="width: 100%; margin: 0;">选中并复制</button>
+        <button id="btn-sync-apply" class="menu-btn" style="width: 100%; margin-top: 10px; display: none;">导入步码</button>
+        <button id="btn-sync-close" class="menu-btn" style="width: 100%; margin-top: 10px; border-color: var(--border); color: #94a3b8;">关闭</button>
+    </div>
+</div>
 
 <script>
 /**
@@ -244,7 +270,7 @@ window.addEventListener('error', function(e) {
     };
 
     let state = {
-        mode: 'ai', // 'ai' | 'pvp'
+        mode: 'ai',
         board: [], 
         turn: 'red',
         selectedPiece: null,
@@ -254,7 +280,8 @@ window.addEventListener('error', function(e) {
         redEnergy: 0,
         blackEnergy: 0,
         stats: { wins: 0, losses: 0 },
-        isFlipped: false
+        isFlipped: false,
+        share: { roomId: '', myColor: 'red', seq: 0 }
     };
 
     // DOM 元素
@@ -271,7 +298,17 @@ window.addEventListener('error', function(e) {
         playerRank: document.getElementById('player-rank'),
         blackName: document.getElementById('black-name'),
         btnRedSkill: document.getElementById('btn-red-skill'),
-        btnBlackSkill: document.getElementById('btn-black-skill')
+        btnBlackSkill: document.getElementById('btn-black-skill'),
+        inviteModal: document.getElementById('invite-modal'),
+        inviteOutput: document.getElementById('invite-output'),
+        inviteInput: document.getElementById('invite-input'),
+        syncModal: document.getElementById('sync-modal'),
+        syncTitle: document.getElementById('sync-title'),
+        syncDesc: document.getElementById('sync-desc'),
+        syncOutput: document.getElementById('sync-output'),
+        syncInput: document.getElementById('sync-input'),
+        btnSyncCopy: document.getElementById('btn-sync-copy'),
+        btnSyncApply: document.getElementById('btn-sync-apply')
     };
 
     const PIECES = {
@@ -291,6 +328,81 @@ window.addEventListener('error', function(e) {
         'b_pao': { text: '炮', type: 'pao', color: 'black' },
         'b_bing': { text: '卒', type: 'bing', color: 'black' }
     };
+
+    function randomRoomId() {
+        return Math.random().toString(36).slice(2, 8).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    }
+
+    function encodePayload(obj) {
+        const json = JSON.stringify(obj);
+        return btoa(unescape(encodeURIComponent(json)));
+    }
+
+    function decodePayload(str) {
+        const json = decodeURIComponent(escape(atob((str || '').trim())));
+        return JSON.parse(json);
+    }
+
+    function openInviteModal() {
+        UI.inviteOutput.value = '';
+        UI.inviteInput.value = '';
+        UI.inviteModal.style.display = 'flex';
+    }
+
+    function closeInviteModal() {
+        UI.inviteModal.style.display = 'none';
+    }
+
+    function openSyncModalForSend(code) {
+        UI.syncTitle.textContent = '步码分享';
+        UI.syncDesc.textContent = '将下方步码复制并发送给对方；对方导入后即可继续对决。';
+        UI.syncOutput.style.display = 'block';
+        UI.syncInput.style.display = 'none';
+        UI.btnSyncApply.style.display = 'none';
+        UI.syncOutput.value = code;
+        UI.syncModal.style.display = 'flex';
+    }
+
+    function openSyncModalForReceive() {
+        UI.syncTitle.textContent = '导入步码';
+        UI.syncDesc.textContent = '将对方发来的步码粘贴到下方，然后点击“导入步码”。';
+        UI.syncOutput.style.display = 'none';
+        UI.syncInput.style.display = 'block';
+        UI.btnSyncApply.style.display = 'block';
+        UI.syncInput.value = '';
+        UI.syncModal.style.display = 'flex';
+        setTimeout(() => UI.syncInput.focus(), 0);
+    }
+
+    function closeSyncModal() {
+        UI.syncModal.style.display = 'none';
+    }
+
+    function selectAndCopy(textarea) {
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        try { document.execCommand('copy'); } catch (e) {}
+    }
+
+    function getSnapshot() {
+        return {
+            board: state.board,
+            redEnergy: state.redEnergy,
+            blackEnergy: state.blackEnergy,
+            turn: state.turn
+        };
+    }
+
+    function applySnapshot(snapshot) {
+        state.board = snapshot.board;
+        state.redEnergy = snapshot.redEnergy;
+        state.blackEnergy = snapshot.blackEnergy;
+        state.turn = snapshot.turn;
+        state.selectedPiece = null;
+        state.validMoves = [];
+        state.gameOver = false;
+    }
 
     // --- 初始化 ---
 
@@ -314,10 +426,79 @@ window.addEventListener('error', function(e) {
         // 菜单事件
         document.getElementById('btn-start-ai').addEventListener('click', () => startGame('ai'));
         document.getElementById('btn-start-pvp').addEventListener('click', () => startGame('pvp'));
+        document.getElementById('btn-start-share').addEventListener('click', openInviteModal);
+        document.getElementById('btn-invite-close').addEventListener('click', closeInviteModal);
+        document.getElementById('btn-invite-create').addEventListener('click', () => {
+            const roomId = randomRoomId();
+            state.share.roomId = roomId;
+            state.share.myColor = 'red';
+            state.share.seq = 0;
+            startGame('share');
+            const payload = { v: 1, kind: 'room', roomId, snapshot: getSnapshot() };
+            UI.inviteOutput.value = encodePayload(payload);
+            selectAndCopy(UI.inviteOutput);
+        });
+        document.getElementById('btn-invite-join').addEventListener('click', () => {
+            try {
+                const payload = decodePayload(UI.inviteInput.value);
+                if (!payload || payload.kind !== 'room' || !payload.roomId || !payload.snapshot) {
+                    showMessage('对局码无效', 1200);
+                    return;
+                }
+                state.share.roomId = payload.roomId;
+                state.share.myColor = 'black';
+                state.share.seq = 0;
+                startGame('share', payload.snapshot);
+                closeInviteModal();
+                showMessage('加入成功，等待对方先手', 1500);
+            } catch (e) {
+                showMessage('对局码无效', 1200);
+            }
+        });
+        document.getElementById('btn-sync-close').addEventListener('click', closeSyncModal);
+        UI.btnSyncCopy.addEventListener('click', () => {
+            if (UI.syncOutput.style.display !== 'none') selectAndCopy(UI.syncOutput);
+            else selectAndCopy(UI.syncInput);
+        });
+        UI.btnSyncApply.addEventListener('click', () => {
+            try {
+                const payload = decodePayload(UI.syncInput.value);
+                if (!payload || payload.kind !== 'move' || payload.roomId !== state.share.roomId || !payload.snapshot) {
+                    showMessage('步码无效', 1200);
+                    return;
+                }
+                if (payload.seq !== state.share.seq + 1) {
+                    showMessage('步码顺序不匹配', 1200);
+                    return;
+                }
+                applySnapshot(payload.snapshot);
+                state.share.seq = payload.seq;
+                updateUI();
+                drawBoard();
+                closeSyncModal();
+                if (state.turn !== state.share.myColor) showMessage('已同步，等待对方', 1200);
+            } catch (e) {
+                showMessage('步码无效', 1200);
+            }
+        });
         
-        // 游戏控制事件
-        document.getElementById('btn-restart').addEventListener('click', () => startGame(state.mode));
-        document.getElementById('btn-undo').addEventListener('click', undoMove);
+        // 控制事件
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            if (state.mode === 'share') {
+                UI.game.style.display = 'none';
+                UI.menu.style.display = 'flex';
+                openInviteModal();
+                return;
+            }
+            startGame(state.mode);
+        });
+        document.getElementById('btn-undo').addEventListener('click', () => {
+            if (state.mode === 'share') {
+                openSyncModalForReceive();
+            } else {
+                undoMove();
+            }
+        });
         document.getElementById('btn-flip').addEventListener('click', () => {
             state.isFlipped = !state.isFlipped;
             drawBoard();
@@ -325,6 +506,12 @@ window.addEventListener('error', function(e) {
         document.getElementById('btn-exit').addEventListener('click', () => {
             UI.game.style.display = 'none';
             UI.menu.style.display = 'flex';
+            closeInviteModal();
+            closeSyncModal();
+            state.mode = 'ai';
+            state.share.roomId = '';
+            state.share.myColor = 'red';
+            state.share.seq = 0;
         });
         
         // 技能事件
@@ -426,7 +613,7 @@ window.addEventListener('error', function(e) {
         drawBoard();
     }
 
-    function startGame(mode) {
+    function startGame(mode, snapshot) {
         state.mode = mode;
         state.isFlipped = false;
         
@@ -437,35 +624,46 @@ window.addEventListener('error', function(e) {
             UI.modeTitle.textContent = "人机对决";
             UI.blackName.textContent = "天网 AI";
             UI.btnBlackSkill.style.display = 'none'; 
-        } else {
+            document.getElementById('btn-undo').textContent = '↩️ 悔棋';
+        } else if (mode === 'pvp') {
             UI.modeTitle.textContent = "双人同屏";
             UI.blackName.textContent = "玩家2 (黑方)";
             UI.btnBlackSkill.style.display = 'block';
+            document.getElementById('btn-undo').textContent = '↩️ 悔棋';
+        } else {
+            UI.modeTitle.textContent = "邀请对决";
+            UI.blackName.textContent = "远端对手";
+            UI.btnBlackSkill.style.display = 'block';
+            document.getElementById('btn-undo').textContent = '📥 导入';
         }
 
-        // 初始化棋盘
-        state.board = Array(10).fill(null).map(() => Array(9).fill(null));
-        state.board[0] = ['b_che', 'b_ma', 'b_xiang', 'b_shi', 'b_jiang', 'b_shi', 'b_xiang', 'b_ma', 'b_che'];
-        state.board[2][1] = 'b_pao'; state.board[2][7] = 'b_pao';
-        state.board[3][0] = 'b_bing'; state.board[3][2] = 'b_bing'; state.board[3][4] = 'b_bing'; state.board[3][6] = 'b_bing'; state.board[3][8] = 'b_bing';
+        if (snapshot) {
+            applySnapshot(snapshot);
+            state.history = [];
+        } else {
+            state.board = Array(10).fill(null).map(() => Array(9).fill(null));
+            state.board[0] = ['b_che', 'b_ma', 'b_xiang', 'b_shi', 'b_jiang', 'b_shi', 'b_xiang', 'b_ma', 'b_che'];
+            state.board[2][1] = 'b_pao'; state.board[2][7] = 'b_pao';
+            state.board[3][0] = 'b_bing'; state.board[3][2] = 'b_bing'; state.board[3][4] = 'b_bing'; state.board[3][6] = 'b_bing'; state.board[3][8] = 'b_bing';
 
-        state.board[9] = ['r_che', 'r_ma', 'r_xiang', 'r_shi', 'r_jiang', 'r_shi', 'r_xiang', 'r_ma', 'r_che'];
-        state.board[7][1] = 'r_pao'; state.board[7][7] = 'r_pao';
-        state.board[6][0] = 'r_bing'; state.board[6][2] = 'r_bing'; state.board[6][4] = 'r_bing'; state.board[6][6] = 'r_bing'; state.board[6][8] = 'r_bing';
+            state.board[9] = ['r_che', 'r_ma', 'r_xiang', 'r_shi', 'r_jiang', 'r_shi', 'r_xiang', 'r_ma', 'r_che'];
+            state.board[7][1] = 'r_pao'; state.board[7][7] = 'r_pao';
+            state.board[6][0] = 'r_bing'; state.board[6][2] = 'r_bing'; state.board[6][4] = 'r_bing'; state.board[6][6] = 'r_bing'; state.board[6][8] = 'r_bing';
 
-        state.turn = 'red';
-        state.selectedPiece = null;
-        state.validMoves = [];
-        state.history = [];
-        state.gameOver = false;
-        state.redEnergy = 0;
-        state.blackEnergy = 0;
+            state.turn = 'red';
+            state.selectedPiece = null;
+            state.validMoves = [];
+            state.history = [];
+            state.gameOver = false;
+            state.redEnergy = 0;
+            state.blackEnergy = 0;
+        }
         
         // 延迟调用以确保布局计算正确
         setTimeout(() => {
             resizeCanvas();
             updateUI();
-            showMessage(mode === 'ai' ? "对决开始！" : "双人联机！", 1500);
+            showMessage(mode === 'ai' ? "对决开始！" : (mode === 'pvp' ? "同屏对决！" : "邀请对决！"), 1500);
         }, 50);
     }
 
@@ -505,7 +703,7 @@ window.addEventListener('error', function(e) {
     function getRenderPos(r, c) { return state.isFlipped ? { r: 9 - r, c: 8 - c } : { r, c }; }
     function getLogicPos(renderR, renderC) { return state.isFlipped ? { r: 9 - renderR, c: 8 - renderC } : { r: renderR, c: renderC }; }
 
-    // --- 游戏规则逻辑 ---
+    // --- 规则逻辑 ---
     function getPieceColor(id) { return id ? (id.startsWith('r_') ? 'red' : 'black') : null; }
     function getPieceType(id) { return id ? id.substring(2) : null; }
 
@@ -574,6 +772,7 @@ window.addEventListener('error', function(e) {
     function handleBoardClick(e) {
         if (state.gameOver) return;
         if (state.mode === 'ai' && state.turn !== 'red') return;
+        if (state.mode === 'share' && state.turn !== state.share.myColor) return;
 
         // 支持 pointer 事件以完美兼容移动端触摸
         e.preventDefault();
@@ -650,6 +849,13 @@ window.addEventListener('error', function(e) {
         state.turn = state.turn === 'red' ? 'black' : 'red';
         updateUI();
         drawBoard();
+
+        if (state.mode === 'share') {
+            state.share.seq += 1;
+            const payload = { v: 1, kind: 'move', roomId: state.share.roomId, seq: state.share.seq, snapshot: getSnapshot() };
+            openSyncModalForSend(encodePayload(payload));
+            return;
+        }
 
         if (state.mode === 'ai' && state.turn === 'black' && !state.gameOver) {
             setTimeout(playAITurn, 600);
